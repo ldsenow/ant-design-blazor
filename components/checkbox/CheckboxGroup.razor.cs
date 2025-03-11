@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using AntDesign.Internal;
@@ -7,15 +11,24 @@ using OneOf;
 
 namespace AntDesign
 {
+    /// <summary>
+    /// Display a group of related checkboxes
+    /// </summary>
 #if NET6_0_OR_GREATER
     [CascadingTypeParameter(nameof(TValue))]
 #endif
 
     public partial class CheckboxGroup<TValue> : AntInputComponentBase<TValue[]>, ICheckboxGroup
     {
+        /// <summary>
+        /// Display content in the group. Use <see cref="MixedMode"/> to specify where this should render if using with <see cref="Options"/>
+        /// </summary>
         [Parameter]
         public RenderFragment ChildContent { get; set; }
 
+        /// <summary>
+        /// Options for checkboxes
+        /// </summary>
         [Parameter]
         public OneOf<CheckboxOption<TValue>[], TValue[]> Options
         {
@@ -31,6 +44,10 @@ namespace AntDesign
             }
         }
 
+        /// <summary>
+        /// When both <see cref="ChildContent"/> and <see cref="Options"/> are used this specifies which should render first.
+        /// </summary>
+        /// <default value="CheckboxGroupMixedMode.ChildContentFirst"/>
         [Parameter]
         public CheckboxGroupMixedMode MixedMode
         {
@@ -48,9 +65,16 @@ namespace AntDesign
             }
         }
 
+        /// <summary>
+        /// Callback executed when the checked options change
+        /// </summary>
         [Parameter]
         public EventCallback<TValue[]> OnChange { get; set; }
 
+        /// <summary>
+        /// Disable all checkboxes in the group
+        /// </summary>
+        /// <default value="false" />
         [Parameter]
         public bool Disabled { get; set; }
 
@@ -84,7 +108,16 @@ namespace AntDesign
             checkbox.IsFromOptions = IsCheckboxFromOptions(checkbox);
             if (!checkbox.IsFromOptions)
             {
-                checkbox.SetValue(_selectedValues.Any(x => x.ToString() == checkbox.Label));
+                if (checkbox.ItemValue != null)
+                {
+                    checkbox.SetValue(_selectedValues.Any(x => checkbox.ItemValue.Equals(x)));
+                }
+                else
+                {
+                    checkbox.SetValue(_selectedValues.Any(x => x.ToString() == checkbox.Label));
+                    checkbox.SetItemValue(checkbox.Label);
+                }
+
                 if (_indexConstructedOptionsOffset == -1)
                     _indexConstructedOptionsOffset = _checkboxItems.Count - 1;
             }
@@ -158,23 +191,11 @@ namespace AntDesign
             }
             else
             {
-                var invokeChange = false;
-
                 _checkboxItems.ForEach(x =>
                 {
                     var checkBoxValue = ((TValue)x.ItemValue).IsIn(value);
-                    if (checkBoxValue != x.Value)
-                    {
-                        invokeChange = true;
-                        x.SetValue(checkBoxValue);
-                        OnCheckboxChange(x, false);
-                    }
+                    x.SetValue(checkBoxValue);
                 });
-
-                if (invokeChange)
-                {
-                    InvokeValueChange();
-                }
             }
         }
 
@@ -194,7 +215,7 @@ namespace AntDesign
 
         private OneOf<CheckboxOption<TValue>[], TValue[]> CreateConstructedOptions()
         {
-            if (Options.IsT0)
+            if (Options.Value is not null && Options.IsT0)
             {
                 return _checkboxItems
                     .Where(c => !c.IsFromOptions)

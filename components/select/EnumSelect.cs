@@ -2,13 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using AntDesign;
-using AntDesign.Select.Internal;
-using Microsoft.AspNetCore.Components;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using Microsoft.AspNetCore.Components;
 
 namespace AntDesign
 {
@@ -28,7 +24,11 @@ namespace AntDesign
             get => base.Value;
             set
             {
-                base.Values = EnumHelper<TEnum>.Split(value).ToArray();
+                if (EnumHelper<TEnum>.IsFlags)
+                {
+                    base.Values = EnumHelper<TEnum>.Split(value).ToArray();
+                }
+
                 base.Value = value;
             }
         }
@@ -39,7 +39,11 @@ namespace AntDesign
             get => base.Values;
             set
             {
-                base.CurrentValue = (TEnum)EnumHelper<TEnum>.Combine(value) ?? default;
+                if (EnumHelper<TEnum>.IsFlags)
+                {
+                    base.CurrentValue = (TEnum)EnumHelper<TEnum>.Combine(value) ?? default;
+                }
+
                 base.Values = value;
             }
         }
